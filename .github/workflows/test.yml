@@ -85,6 +85,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://dashboard_user:dashboard_password@localhost:5432/dashboard_test
           NODE_ENV: test
+          JWT_SECRET: ci-test-access-secret-not-for-production
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-not-for-production
+          JWT_EXPIRATION: 15m
+          JWT_REFRESH_EXPIRATION: 7d
+          BCRYPT_ROUNDS: 1
       
       - name: Upload coverage
         uses: codecov/codecov-action@v4
