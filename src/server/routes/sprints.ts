@@ -275,4 +275,80 @@ router.get('/:sprintId/velocity', authenticate, async (req: AuthRequest, res: Re
   });
 });
 
+// ── GET /api/projects/:projectId/sprints/:sprintId/burndown ───────────────────
+// Burndown chart data: points remaining per day across the sprint (AC5)
+
+router.get('/:sprintId/burndown', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const projectId = parseInt(req.params['projectId'], 10);
+  const sprintId  = parseInt(req.params['sprintId'],  10);
+  if (isNaN(projectId) || isNaN(sprintId)) {
+    res.status(400).json({ error: { message: 'Invalid id', statusCode: 400 } }); return;
+  }
+
+  const sprint = await prisma.sprint.findFirst({ where: { id: sprintId, projectId } });
+  if (!sprint) {
+    res.status(404).json({ error: { message: 'Sprint not found', statusCode: 404 } }); return;
+  }
+
+  // Burndown requires sprint dates to plot
+  if (!sprint.startDate || !sprint.endDate) {
+    res.status(422).json({
+      error: { message: 'Sprint must have startDate and endDate for burndown data', statusCode: 422 },
+    }); return;
+  }
+
+  // Committed total at sprint start
+  const issues = await prisma.issue.findMany({
+    where: { sprintId, archivedAt: null },
+    select: { id: true, status: true, estimate: true, updatedAt: true },
+  });
+
+  type BurndownIssue = { id: number; status: string; estimate: number | null; updatedAt: Date };
+  const totalPoints = (issues as BurndownIssue[]).reduce((s, i) => s + (i.estimate ?? 0), 0);
+
+  // Build daily data points from startDate to today (or endDate, whichever is earlier)
+  const start = new Date(sprint.startDate);
+  const end   = new Date(Math.min(sprint.endDate.getTime(), Date.now()));
+
+  const days: { date: string; pointsRemaining: number; pointsCompleted: number }[] = [];
+  let cumCompleted = 0;
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dayEnd = new Date(d);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    // Points completed up to end of this day
+    const doneByDay = (issues as BurndownIssue[])
+      .filter(
+        (i) =>
+          (i.status === 'Done' || i.status === 'Closed') &&
+          i.updatedAt <= dayEnd,
+      )
+      .reduce((s, i) => s + (i.estimate ?? 0), 0);
+
+    cumCompleted = doneByDay;
+
+    days.push({
+      date: new Date(d).toISOString().split('T')[0]!,
+      pointsCompleted: cumCompleted,
+      pointsRemaining: Math.max(0, totalPoints - cumCompleted),
+    });
+  }
+
+  res.json({
+    data: {
+      sprintId,
+      sprintName: sprint.name,
+      startDate: sprint.startDate,
+      endDate: sprint.endDate,
+      totalPoints,
+      idealBurndown: days.map((d, idx) => ({
+        date: d.date,
+        idealRemaining: Math.round(totalPoints * (1 - idx / Math.max(days.length - 1, 1))),
+      })),
+      actualBurndown: days,
+    },
+  });
+});
+
 export default router;

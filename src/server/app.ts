@@ -5,8 +5,10 @@ import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import issueRoutes from './routes/issues';
+import issueStandaloneRoutes from './routes/issues-standalone';
 import sprintRoutes from './routes/sprints';
 import commentRoutes from './routes/comments';
+import commentStandaloneRoutes from './routes/comments-standalone';
 import searchRoutes from './routes/search';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -28,6 +30,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/projects/:projectId/issues', issueRoutes);
 app.use('/api/projects/:projectId/sprints', sprintRoutes);
 app.use('/api/projects/:projectId/issues/:issueId/comments', commentRoutes);
+app.use('/api/issues', issueStandaloneRoutes);
+app.use('/api/comments', commentStandaloneRoutes);
 app.use('/api/search', searchRoutes);
 
 // 404 handler — catches any request that didn't match a route above

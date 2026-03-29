@@ -12,6 +12,7 @@ const prisma = new PrismaClient();
 let workspaceId: number;
 let projectId: number;
 let issueId: number;
+let ceoId: number;
 let ceoToken: string;
 
 beforeAll(async () => {
@@ -35,6 +36,7 @@ beforeAll(async () => {
     create: { email: 'ceo@sprinttest.com', passwordHash: hash, firstName: 'CEO', lastName: 'Sprint', roleId: ceoRole.id },
   });
   ceoToken = signAccessToken({ userId: ceo.id, email: ceo.email, role: 'CEO' });
+  ceoId = ceo.id;
 
   const project = await prisma.project.create({
     data: { key: 'SPR', name: 'Sprint Test Project', workspaceId, createdById: ceo.id },
@@ -666,5 +668,94 @@ describe('Issues edge cases (branch coverage)', () => {
       .delete(`/api/projects/${projectId}/issues/${issueId}/links/999999`)
       .set('Authorization', `Bearer ${ceoToken}`);
     expect(res.status).toBe(404);
+  });
+});
+
+// ── Branch coverage extras: sprints ──────────────────────────────────────────
+
+describe('Sprint branch coverage extras', () => {
+  it('PUT sprint: returns 400 for non-numeric ids', async () => {
+    const res = await request(app)
+      .put(`/api/projects/abc/sprints/xyz`)
+      .set('Authorization', `Bearer ${ceoToken}`)
+      .send({ name: 'Test' });
+    expect(res.status).toBe(400);
+  });
+
+  it('velocity: issues with null estimate counted as 0', async () => {
+    // Create sprint with issue that has no estimate (null)
+    const sprint = await prisma.sprint.create({
+      data: { name: 'Velocity Null Sprint', projectId, status: 'active' },
+    });
+    await prisma.issue.create({
+      data: {
+        key: `SPR-VN${sprint.id}`, issueNumber: sprint.id + 100,
+        title: 'No estimate issue', projectId, reporterId: ceoId!,
+        sprintId: sprint.id, estimate: null, status: 'Done',
+      },
+    });
+    await prisma.issue.create({
+      data: {
+        key: `SPR-VI${sprint.id}`, issueNumber: sprint.id + 101,
+        title: 'In review issue', projectId, reporterId: ceoId!,
+        sprintId: sprint.id, estimate: null, status: 'In Review',
+      },
+    });
+
+    const res = await request(app)
+      .get(`/api/projects/${projectId}/sprints/${sprint.id}/velocity`)
+      .set('Authorization', `Bearer ${ceoToken}`);
+    expect(res.status).toBe(200);
+    // null estimates default to 0
+    expect(res.body.data.totalPoints).toBe(0);
+    expect(res.body.data.completedPoints).toBe(0);
+    expect(res.body.data.inProgressPoints).toBe(0);
+  });
+
+  it('burndown: issue with null estimate counted as 0', async () => {
+    const sprint = await prisma.sprint.create({
+      data: {
+        name: 'Burndown Null Sprint',
+        projectId,
+        startDate: new Date('2026-03-01'),
+        endDate: new Date('2026-03-07'),
+        status: 'completed',
+      },
+    });
+    await prisma.issue.create({
+      data: {
+        key: `SPR-BD${sprint.id}`, issueNumber: sprint.id + 200,
+        title: 'Burndown null issue', projectId, reporterId: ceoId!,
+        sprintId: sprint.id, estimate: null, status: 'Done',
+      },
+    });
+
+    const res = await request(app)
+      .get(`/api/projects/${projectId}/sprints/${sprint.id}/burndown`)
+      .set('Authorization', `Bearer ${ceoToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.totalPoints).toBe(0);
+    expect(Array.isArray(res.body.data.actualBurndown)).toBe(true);
+  });
+
+  it('issues.ts: sprintId change from null triggers sprint_changed log', async () => {
+    const sprint = await prisma.sprint.create({
+      data: { name: 'Sprint for log', projectId },
+    });
+    // Create issue with no sprint
+    const issue = await prisma.issue.create({
+      data: {
+        key: `SPR-SCH${sprint.id}`, issueNumber: sprint.id + 300,
+        title: 'Sprint change test', projectId, reporterId: ceoId!,
+        sprintId: null,
+      },
+    });
+
+    const res = await request(app)
+      .put(`/api/projects/${projectId}/issues/${issue.id}`)
+      .set('Authorization', `Bearer ${ceoToken}`)
+      .send({ sprintId: sprint.id });
+    expect(res.status).toBe(200);
+    expect(res.body.data.sprintId).toBe(sprint.id);
   });
 });
