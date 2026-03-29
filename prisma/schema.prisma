@@ -14,16 +14,12 @@ datasource db {
 // CORE DOMAIN MODELS - REQ-001 Foundation
 // ============================================================================
 
-/**
- * Role model - Defines the executive roles in the system
- * 
- * Executive roles supported:
- * - CEO: Chief Executive Officer - Full access to all projects and tasks
- * - CTO: Chief Technology Officer - Access to technical projects and tasks
- * - COO: Chief Operating Officer - Access to operational projects and tasks
- * 
- * Each user is assigned one primary role.
- */
+// Role model - Defines the executive roles in the system
+// Executive roles supported:
+// - CEO: Chief Executive Officer - Full access to all projects and tasks
+// - CTO: Chief Technology Officer - Access to technical projects and tasks
+// - COO: Chief Operating Officer - Access to operational projects and tasks
+// Each user is assigned one primary role.
 model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique
@@ -37,15 +33,11 @@ model Role {
   @@map("roles")
 }
 
-/**
- * Workspace model - Isolated work areas for different organizational units
- * 
- * Each workspace is associated with a specific role.
- * For example:
- * - CEO Workspace: Cross-functional view
- * - CTO Workspace: Technical focus
- * - COO Workspace: Operations focus
- */
+// Workspace model - Isolated work areas for different organizational units
+// Each workspace is associated with a specific role:
+// - CEO Workspace: Cross-functional view
+// - CTO Workspace: Technical focus
+// - COO Workspace: Operations focus
 model Workspace {
   id          Int      @id @default(autoincrement())
   name        String
@@ -63,12 +55,9 @@ model Workspace {
   @@map("workspaces")
 }
 
-/**
- * Project model - High-level initiatives and programs
- * 
- * Projects are containers for related tasks and milestones.
- * Each project belongs to a specific workspace.
- */
+// Project model - High-level initiatives and programs
+// Projects are containers for related tasks and milestones.
+// Each project belongs to a specific workspace.
 model Project {
   id            Int       @id @default(autoincrement())
   name          String
@@ -87,15 +76,12 @@ model Project {
   @@map("projects")
 }
 
-/**
- * Task model - Individual work items within projects
- * 
- * Tasks are the primary unit of work. They:
- * - Belong to a project (and thus a workspace)
- * - Can be created via voice command (REQ-007)
- * - Have status tracking (todo, in-progress, done, blocked)
- * - Can be assigned priorities (low, medium, high, critical)
- */
+// Task model - Individual work items within projects
+// Tasks are the primary unit of work. They:
+// - Belong to a project (and thus a workspace)
+// - Can be created via voice command (REQ-007)
+// - Have status tracking (todo, in-progress, done, blocked)
+// - Can be assigned priorities (low, medium, high, critical)
 model Task {
   id          Int      @id @default(autoincrement())
   title       String
@@ -122,11 +108,8 @@ model Task {
   @@map("tasks")
 }
 
-/**
- * Milestone model - Key dates and deliverables for projects
- * 
- * Milestones help track project progress and major deliverables.
- */
+// Milestone model - Key dates and deliverables for projects
+// Milestones help track project progress and major deliverables.
 model Milestone {
   id          Int      @id @default(autoincrement())
   name        String
