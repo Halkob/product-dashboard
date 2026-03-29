@@ -5,20 +5,25 @@ const router = Router();
 /**
  * Health check endpoint
  * GET /api/health
- * 
+ *
  * Returns basic health status of the application.
  * Used for monitoring and load balancer health checks.
  */
 router.get('/', (_req: Request, res: Response) => {
-  const healthStatus = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    version: '0.1.0-alpha',
-  };
-
-  res.status(200).json(healthStatus);
+  try {
+    const healthStatus = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env['NODE_ENV'] ?? 'development',
+      version: '0.1.0-alpha',
+    };
+    res.status(200).json(healthStatus);
+  } catch {
+    res.status(500).json({
+      error: { message: 'Health check failed', statusCode: 500, timestamp: new Date().toISOString() },
+    });
+  }
 });
 
 export default router;

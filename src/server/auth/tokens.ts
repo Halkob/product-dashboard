@@ -33,5 +33,5 @@ export function parseExpiryMs(expiry: string): number {
   const units: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
   const match = expiry.match(/^(\d+)([smhd])$/);
   if (!match || !match[1] || !match[2]) throw new Error(`Invalid expiry format: ${expiry}`);
-  return parseInt(match[1], 10) * (units[match[2]] ?? 0);
+  return parseInt(match[1], 10) * units[match[2]]!;
 }

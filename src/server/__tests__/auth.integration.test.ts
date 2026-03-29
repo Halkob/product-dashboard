@@ -40,7 +40,9 @@ describe('POST /api/auth/register', () => {
     const res = await request(app).post('/api/auth/register').send(validUser);
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).toHaveProperty('refreshToken');
+    // refresh token is now in httpOnly cookie, not in body
+    expect(res.body).not.toHaveProperty('refreshToken');
+    expect(res.headers['set-cookie']).toBeDefined();
     expect(res.body.user.email).toBe(validUser.email);
     expect(res.body.user.role).toBe(TEST_ROLE_NAME);
   });
@@ -79,7 +81,9 @@ describe('POST /api/auth/login', () => {
       .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).toHaveProperty('refreshToken');
+    // refresh token is in httpOnly cookie, not body
+    expect(res.body).not.toHaveProperty('refreshToken');
+    expect(res.headers['set-cookie']).toBeDefined();
     expect(res.body.user.email).toBe('ceo@authtest.com');
   });
 
@@ -104,76 +108,88 @@ describe('POST /api/auth/login', () => {
 });
 
 describe('POST /api/auth/refresh', () => {
-  let refreshToken: string;
+  let refreshCookie: string;
 
   beforeAll(async () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
-    refreshToken = res.body.refreshToken as string;
+    // Extract the Set-Cookie header value to replay on subsequent requests
+    refreshCookie = (res.headers['set-cookie'] as unknown as string[])[0]!;
   });
 
-  it('should issue a new access token for a valid refresh token', async () => {
-    const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
+  it('should issue a new access token for a valid refresh cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', refreshCookie);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
   });
 
-  it('should reject an invalid refresh token with 401', async () => {
-    const res = await request(app).post('/api/auth/refresh').send({ refreshToken: 'bogus' });
-    expect(res.status).toBe(401);
-  });
-
-  it('should reject a missing body with 400', async () => {
-    const res = await request(app).post('/api/auth/refresh').send({});
+  it('should reject when no cookie is present with 400', async () => {
+    const res = await request(app).post('/api/auth/refresh');
     expect(res.status).toBe(400);
   });
 
+  it('should reject an invalid refresh token in cookie with 401', async () => {
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', 'refreshToken=bogus.token.here; Path=/api/auth; HttpOnly');
+    expect(res.status).toBe(401);
+  });
+
   it('should reject a valid JWT that is not in the database with 401', async () => {
-    // Sign a token with correct secret but never stored in DB
     const { signRefreshToken: sign } = await import('../auth/tokens');
     const unknownToken = sign({ userId: 999, email: 'ghost@example.com', role: 'CEO' });
-    const res = await request(app).post('/api/auth/refresh').send({ refreshToken: unknownToken });
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', `refreshToken=${unknownToken}; Path=/api/auth; HttpOnly`);
     expect(res.status).toBe(401);
   });
 });
 
 describe('POST /api/auth/logout', () => {
-  let refreshToken: string;
+  let refreshCookie: string;
 
   beforeAll(async () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
-    refreshToken = res.body.refreshToken as string;
+    refreshCookie = (res.headers['set-cookie'] as unknown as string[])[0]!;
   });
 
-  it('should revoke the refresh token', async () => {
-    const res = await request(app).post('/api/auth/logout').send({ refreshToken });
+  it('should revoke the refresh token and clear cookie', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', refreshCookie);
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Logged out successfully');
   });
 
   it('should reject the revoked refresh token on subsequent refresh', async () => {
-    const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', refreshCookie);
     expect(res.status).toBe(401);
   });
 
-  it('should return 400 when no refresh token is provided', async () => {
-    const res = await request(app).post('/api/auth/logout').send({});
+  it('should return 400 when no refresh cookie is present', async () => {
+    const res = await request(app).post('/api/auth/logout');
     expect(res.status).toBe(400);
   });
 
   it('should return 200 even when logging out an already-revoked token (idempotent)', async () => {
-    const res = await request(app).post('/api/auth/logout').send({ refreshToken });
+    const res = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', refreshCookie);
     expect(res.status).toBe(200);
   });
 });
 
 describe('POST /api/auth/logout-all', () => {
   let accessToken: string;
-  let refreshToken1: string;
-  let refreshToken2: string;
+  let refreshCookie1: string;
+  let refreshCookie2: string;
 
   beforeAll(async () => {
     // Login twice to create two active sessions
@@ -181,12 +197,12 @@ describe('POST /api/auth/logout-all', () => {
       .post('/api/auth/login')
       .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
     accessToken = res1.body.accessToken as string;
-    refreshToken1 = res1.body.refreshToken as string;
+    refreshCookie1 = (res1.headers['set-cookie'] as unknown as string[])[0]!;
 
     const res2 = await request(app)
       .post('/api/auth/login')
       .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
-    refreshToken2 = res2.body.refreshToken as string;
+    refreshCookie2 = (res2.headers['set-cookie'] as unknown as string[])[0]!;
   });
 
   it('should revoke all sessions and return 200', async () => {
@@ -197,10 +213,14 @@ describe('POST /api/auth/logout-all', () => {
     expect(res.body.message).toBe('Logged out from all devices');
   });
 
-  it('should reject both refresh tokens after logout-all', async () => {
-    const r1 = await request(app).post('/api/auth/refresh').send({ refreshToken: refreshToken1 });
+  it('should reject both refresh cookies after logout-all', async () => {
+    const r1 = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', refreshCookie1);
     expect(r1.status).toBe(401);
-    const r2 = await request(app).post('/api/auth/refresh').send({ refreshToken: refreshToken2 });
+    const r2 = await request(app)
+      .post('/api/auth/refresh')
+      .set('Cookie', refreshCookie2);
     expect(r2.status).toBe(401);
   });
 

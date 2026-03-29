@@ -47,6 +47,7 @@ export const logout = createAsyncThunk(
   async (_: void, { getState, rejectWithValue }) => {
     const state = (getState() as { auth: AuthState }).auth;
     try {
+      // Use logout-all so the httpOnly cookie is cleared server-side too
       await api.post('/auth/logout-all', null, {
         headers: { Authorization: `Bearer ${state.accessToken}` },
       });
@@ -64,6 +65,7 @@ export const refreshAccessToken = createAsyncThunk(
   'auth/refresh',
   async (_: void, { rejectWithValue }) => {
     try {
+      // Cookie is sent automatically by the browser (withCredentials: true)
       const res = await api.post<{ accessToken: string }>('/auth/refresh');
       return res.data.accessToken;
     } catch {

@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
 import { errorHandler } from './middleware/errorHandler';
@@ -9,8 +10,9 @@ const app: Application = express();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env['CORS_ORIGIN'] /* istanbul ignore next */ ?? 'http://localhost:3000',
   credentials: true,
 }));
 
