@@ -1,0 +1,144 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE DOMAIN MODELS - REQ-001 Foundation
+// ============================================================================
+
+/**
+ * Role model - Defines the executive roles in the system
+ * 
+ * Executive roles supported:
+ * - CEO: Chief Executive Officer - Full access to all projects and tasks
+ * - CTO: Chief Technology Officer - Access to technical projects and tasks
+ * - COO: Chief Operating Officer - Access to operational projects and tasks
+ * 
+ * Each user is assigned one primary role.
+ */
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  workspaces  Workspace[]
+
+  @@map("roles")
+}
+
+/**
+ * Workspace model - Isolated work areas for different organizational units
+ * 
+ * Each workspace is associated with a specific role.
+ * For example:
+ * - CEO Workspace: Cross-functional view
+ * - CTO Workspace: Technical focus
+ * - COO Workspace: Operations focus
+ */
+model Workspace {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  roleId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  projects    Project[]
+  tasks       Task[]
+
+  @@unique([name, roleId])
+  @@map("workspaces")
+}
+
+/**
+ * Project model - High-level initiatives and programs
+ * 
+ * Projects are containers for related tasks and milestones.
+ * Each project belongs to a specific workspace.
+ */
+model Project {
+  id            Int       @id @default(autoincrement())
+  name          String
+  description   String?
+  status        String    @default("active") // active, paused, completed, archived
+  workspaceId   Int
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks         Task[]
+  milestones    Milestone[]
+
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+/**
+ * Task model - Individual work items within projects
+ * 
+ * Tasks are the primary unit of work. They:
+ * - Belong to a project (and thus a workspace)
+ * - Can be created via voice command (REQ-007)
+ * - Have status tracking (todo, in-progress, done, blocked)
+ * - Can be assigned priorities (low, medium, high, critical)
+ */
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("todo") // todo, in-progress, done, blocked
+  priority    String   @default("medium") // low, medium, high, critical
+  projectId   Int?
+  workspaceId Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  dueDate     DateTime?
+  
+  // Voice feature fields (REQ-007)
+  voiceCreated Boolean  @default(false)
+  voiceTranscript String?
+
+  // Relations
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([workspaceId])
+  @@index([status])
+  @@map("tasks")
+}
+
+/**
+ * Milestone model - Key dates and deliverables for projects
+ * 
+ * Milestones help track project progress and major deliverables.
+ */
+model Milestone {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  dueDate     DateTime
+  projectId   Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("milestones")
+}
