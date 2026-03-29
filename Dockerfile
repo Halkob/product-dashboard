@@ -8,6 +8,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY tsconfig*.json ./
+COPY vite.config.ts ./
+COPY index.html ./
 
 # Install dependencies
 RUN npm ci
