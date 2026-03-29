@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 
 export interface TokenPayload {
   userId: number;
@@ -12,11 +13,11 @@ const ACCESS_TTL = process.env['JWT_EXPIRATION'] ?? '15m';
 const REFRESH_TTL = process.env['JWT_REFRESH_EXPIRATION'] ?? '7d';
 
 export function signAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, ACCESS_SECRET, { expiresIn: ACCESS_TTL } as jwt.SignOptions);
+  return jwt.sign({ ...payload, jti: randomUUID() }, ACCESS_SECRET, { expiresIn: ACCESS_TTL } as jwt.SignOptions);
 }
 
 export function signRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_TTL } as jwt.SignOptions);
+  return jwt.sign({ ...payload, jti: randomUUID() }, REFRESH_SECRET, { expiresIn: REFRESH_TTL } as jwt.SignOptions);
 }
 
 export function verifyAccessToken(token: string): TokenPayload {

@@ -123,6 +123,19 @@ describe('POST /api/auth/refresh', () => {
     const res = await request(app).post('/api/auth/refresh').send({ refreshToken: 'bogus' });
     expect(res.status).toBe(401);
   });
+
+  it('should reject a missing body with 400', async () => {
+    const res = await request(app).post('/api/auth/refresh').send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('should reject a valid JWT that is not in the database with 401', async () => {
+    // Sign a token with correct secret but never stored in DB
+    const { signRefreshToken: sign } = await import('../auth/tokens');
+    const unknownToken = sign({ userId: 999, email: 'ghost@example.com', role: 'CEO' });
+    const res = await request(app).post('/api/auth/refresh').send({ refreshToken: unknownToken });
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('POST /api/auth/logout', () => {
@@ -144,6 +157,16 @@ describe('POST /api/auth/logout', () => {
   it('should reject the revoked refresh token on subsequent refresh', async () => {
     const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
     expect(res.status).toBe(401);
+  });
+
+  it('should return 400 when no refresh token is provided', async () => {
+    const res = await request(app).post('/api/auth/logout').send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('should return 200 even when logging out an already-revoked token (idempotent)', async () => {
+    const res = await request(app).post('/api/auth/logout').send({ refreshToken });
+    expect(res.status).toBe(200);
   });
 });
 
