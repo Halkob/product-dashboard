@@ -16,7 +16,7 @@
     "test:watch": "concurrently \"jest --watch\" \"vitest --watch\"",
     "test:coverage": "npm run test:server -- --coverage && npm run test:client -- --coverage",
     "lint": "eslint src --ext .ts,.tsx",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "seed": "tsx prisma/seed.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
