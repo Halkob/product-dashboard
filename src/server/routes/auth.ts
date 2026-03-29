@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { PrismaClient } from '@prisma/client';
 import { RegisterSchema, LoginSchema, RefreshSchema } from '../auth/schemas';
 import {
@@ -8,6 +9,22 @@ import {
   verifyRefreshToken,
   parseExpiryMs,
 } from '../auth/tokens';
+
+// Rate limiter: max 5 failed-equivalent requests per 15 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true, // only count failures toward the limit
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      message: 'Too many login attempts, please try again later',
+      statusCode: 429,
+      timestamp: new Date().toISOString(),
+    },
+  },
+});
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -75,8 +92,8 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
   });
 });
 
-// POST /api/auth/login
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+// POST /api/auth/login  (rate-limited: max 5 failures per 15 min per IP)
+router.post('/login', loginLimiter, async (req: Request, res: Response): Promise<void> => {
   const parsed = LoginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({
@@ -176,6 +193,35 @@ router.post('/logout', async (req: Request, res: Response): Promise<void> => {
   });
 
   res.status(200).json({ message: 'Logged out successfully' });
+});
+
+// POST /api/auth/logout-all  (requires valid access token)
+router.post('/logout-all', async (req: Request, res: Response): Promise<void> => {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({
+      error: { message: 'Unauthorized', statusCode: 401, timestamp: new Date().toISOString() },
+    });
+    return;
+  }
+
+  const { verifyAccessToken } = await import('../auth/tokens');
+  let payload;
+  try {
+    payload = verifyAccessToken(authHeader.slice(7));
+  } catch {
+    res.status(401).json({
+      error: { message: 'Unauthorized', statusCode: 401, timestamp: new Date().toISOString() },
+    });
+    return;
+  }
+
+  await prisma.refreshToken.updateMany({
+    where: { userId: payload.userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+
+  res.status(200).json({ message: 'Logged out from all devices' });
 });
 
 export default router;

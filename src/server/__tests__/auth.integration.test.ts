@@ -170,6 +170,53 @@ describe('POST /api/auth/logout', () => {
   });
 });
 
+describe('POST /api/auth/logout-all', () => {
+  let accessToken: string;
+  let refreshToken1: string;
+  let refreshToken2: string;
+
+  beforeAll(async () => {
+    // Login twice to create two active sessions
+    const res1 = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
+    accessToken = res1.body.accessToken as string;
+    refreshToken1 = res1.body.refreshToken as string;
+
+    const res2 = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'ceo@authtest.com', password: 'SecurePass1' });
+    refreshToken2 = res2.body.refreshToken as string;
+  });
+
+  it('should revoke all sessions and return 200', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout-all')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Logged out from all devices');
+  });
+
+  it('should reject both refresh tokens after logout-all', async () => {
+    const r1 = await request(app).post('/api/auth/refresh').send({ refreshToken: refreshToken1 });
+    expect(r1.status).toBe(401);
+    const r2 = await request(app).post('/api/auth/refresh').send({ refreshToken: refreshToken2 });
+    expect(r2.status).toBe(401);
+  });
+
+  it('should return 401 when no access token is provided', async () => {
+    const res = await request(app).post('/api/auth/logout-all');
+    expect(res.status).toBe(401);
+  });
+
+  it('should return 401 when access token is invalid', async () => {
+    const res = await request(app)
+      .post('/api/auth/logout-all')
+      .set('Authorization', 'Bearer invalid.token.here');
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('Authentication middleware', () => {
   let accessToken: string;
 
