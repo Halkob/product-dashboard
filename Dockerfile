@@ -15,6 +15,8 @@ RUN npm ci
 # Copy source code
 COPY src ./src
 COPY prisma ./prisma
+COPY vite.config.ts ./
+COPY index.html ./
 
 # Build both server and client
 RUN npm run build

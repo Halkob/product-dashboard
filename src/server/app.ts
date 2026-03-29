@@ -3,6 +3,11 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import healthRoutes from './routes/health';
 import authRoutes from './routes/auth';
+import projectRoutes from './routes/projects';
+import issueRoutes from './routes/issues';
+import sprintRoutes from './routes/sprints';
+import commentRoutes from './routes/comments';
+import searchRoutes from './routes/search';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Application = express();
@@ -19,6 +24,11 @@ app.use(cors({
 // Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/projects/:projectId/issues', issueRoutes);
+app.use('/api/projects/:projectId/sprints', sprintRoutes);
+app.use('/api/projects/:projectId/issues/:issueId/comments', commentRoutes);
+app.use('/api/search', searchRoutes);
 
 // 404 handler — catches any request that didn't match a route above
 app.use((_req, res) => {
