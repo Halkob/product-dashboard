@@ -28,3 +28,16 @@ describe('Health Check Endpoint', () => {
     expect(res.body.uptime).toBeGreaterThan(0);
   });
 });
+
+describe('404 Handler', () => {
+  it('should return 404 JSON for unknown routes', async () => {
+    const res = await request(app)
+      .get('/api/nonexistent')
+      .expect('Content-Type', /json/)
+      .expect(404);
+
+    expect(res.body.error).toHaveProperty('message', 'Not Found');
+    expect(res.body.error).toHaveProperty('statusCode', 404);
+    expect(res.body.error).toHaveProperty('timestamp');
+  });
+});

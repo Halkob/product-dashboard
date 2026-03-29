@@ -16,6 +16,17 @@ app.use(cors({
 // Routes
 app.use('/api/health', healthRoutes);
 
+// 404 handler — catches any request that didn't match a route above
+app.use((_req, res) => {
+  res.status(404).json({
+    error: {
+      message: 'Not Found',
+      statusCode: 404,
+      timestamp: new Date().toISOString(),
+    },
+  });
+});
+
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
