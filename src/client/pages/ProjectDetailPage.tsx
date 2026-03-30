@@ -80,7 +80,7 @@ const IssueCard: React.FC<{ issue: Issue; onClick: () => void }> = ({ issue, onC
           <Chip label={issue.priority} size="small" color={PRIORITY_COLORS[issue.priority] ?? 'default'} sx={{ ml: 'auto', height: 20, fontSize: 11 }} />
         </Box>
         <Typography variant="body2" noWrap>
-          {issue.summary}
+          {issue.title}
         </Typography>
         {issue.assignee && (
           <Typography variant="caption" color="text.secondary">
@@ -117,7 +117,7 @@ const ProjectDetailPage: React.FC = () => {
 
   // Issue form
   const [iType, setIType] = useState('Task');
-  const [iSummary, setISummary] = useState('');
+  const [iTitle, setITitle] = useState('');
   const [iDesc, setIDesc] = useState('');
   const [iPriority, setIPriority] = useState('Medium');
   const [iEstimate, setIEstimate] = useState<number | ''>('');
@@ -169,20 +169,20 @@ const ProjectDetailPage: React.FC = () => {
   useEffect(() => { load(); }, [load]);
 
   const handleCreateIssue = async () => {
-    if (!iSummary.trim()) { setFormError('Summary is required'); return; }
+    if (!iTitle.trim()) { setFormError('Title is required'); return; }
     setCreating(true);
     setFormError(null);
     try {
       await createIssue(pid, {
         type: iType,
-        summary: iSummary,
+        title: iTitle,
         description: iDesc || undefined,
         priority: iPriority,
         estimate: iEstimate === '' ? undefined : iEstimate,
         sprintId: activeSprint?.id ?? undefined,
       });
       setIssueDialogOpen(false);
-      setISummary('');
+      setITitle('');
       setIDesc('');
       setIEstimate('');
       load();
@@ -260,19 +260,25 @@ const ProjectDetailPage: React.FC = () => {
 
         {/* Sprint selector */}
         {sprints.length > 0 && (
-          <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
             {sprints.filter((s) => s.status !== 'closed').map((s) => (
-              <Chip
-                key={s.id}
-                label={`${s.name} (${s.status})`}
-                color={s.status === 'active' ? 'primary' : 'default'}
-                variant={s.status === 'active' ? 'filled' : 'outlined'}
-                onClick={() => {
-                  if (s.status === 'planning') handleActivateSprint(s);
-                }}
-                onDelete={s.status === 'active' ? () => handleCloseSprint(s) : undefined}
-                deleteIcon={s.status === 'active' ? <Typography variant="caption" sx={{ px: 0.5 }}>Close</Typography> : undefined}
-              />
+              <Box key={s.id} display="flex" alignItems="center" gap={0.5}>
+                <Chip
+                  label={`${s.name} (${s.status})`}
+                  color={s.status === 'active' ? 'primary' : 'default'}
+                  variant={s.status === 'active' ? 'filled' : 'outlined'}
+                />
+                {s.status === 'planning' && (
+                  <Button size="small" variant="outlined" color="success" onClick={() => handleActivateSprint(s)}>
+                    Start Sprint
+                  </Button>
+                )}
+                {s.status === 'active' && (
+                  <Button size="small" variant="outlined" color="warning" onClick={() => handleCloseSprint(s)}>
+                    Close Sprint
+                  </Button>
+                )}
+              </Box>
             ))}
           </Box>
         )}
@@ -331,7 +337,7 @@ const ProjectDetailPage: React.FC = () => {
               {TYPES.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
             </Select>
           </FormControl>
-          <TextField label="Summary" fullWidth margin="normal" value={iSummary} onChange={(e) => setISummary(e.target.value)} />
+          <TextField label="Title" fullWidth margin="normal" value={iTitle} onChange={(e) => setITitle(e.target.value)} />
           <TextField label="Description" fullWidth margin="normal" multiline rows={3} value={iDesc} onChange={(e) => setIDesc(e.target.value)} />
           <FormControl fullWidth margin="normal">
             <InputLabel>Priority</InputLabel>

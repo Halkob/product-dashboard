@@ -80,7 +80,7 @@ const IssueDetailPage: React.FC = () => {
   const [editStatus, setEditStatus] = useState('');
   const [editPriority, setEditPriority] = useState('');
   const [editEstimate, setEditEstimate] = useState<number | ''>('');
-  const [editSummary, setEditSummary] = useState('');
+  const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -115,7 +115,7 @@ const IssueDetailPage: React.FC = () => {
     setEditStatus(issue.status);
     setEditPriority(issue.priority);
     setEditEstimate(issue.estimate ?? '');
-    setEditSummary(issue.summary);
+    setEditTitle(issue.title);
     setEditDesc(issue.description ?? '');
     setEditError(null);
     setEditOpen(true);
@@ -126,7 +126,7 @@ const IssueDetailPage: React.FC = () => {
     setEditError(null);
     try {
       await updateIssue(iid, {
-        summary: editSummary,
+        title: editTitle,
         description: editDesc || null,
         status: editStatus,
         priority: editPriority,
@@ -196,7 +196,7 @@ const IssueDetailPage: React.FC = () => {
           <IconButton onClick={handleDelete} color="error"><DeleteIcon /></IconButton>
         </Box>
       </Box>
-      <Typography variant="h6" mb={2}>{issue.summary}</Typography>
+      <Typography variant="h6" mb={2}>{issue.title}</Typography>
 
       {/* Detail grid */}
       <Box display="flex" gap={3} flexWrap="wrap" mb={3}>
@@ -215,7 +215,7 @@ const IssueDetailPage: React.FC = () => {
             <DetailRow label="Assignee" value={issue.assignee ? `${issue.assignee.firstName} ${issue.assignee.lastName}` : 'Unassigned'} />
             <DetailRow label="Reporter" value={issue.reporter ? `${issue.reporter.firstName} ${issue.reporter.lastName}` : '—'} />
             <DetailRow label="Sprint" value={issue.sprint?.name ?? 'None'} />
-            {issue.parent && <DetailRow label="Parent" value={`${issue.parent.key} — ${issue.parent.summary}`} />}
+            {issue.parent && <DetailRow label="Parent" value={`${issue.parent.key} — ${issue.parent.title}`} />}
           </Box>
         </Paper>
       </Box>
@@ -225,7 +225,7 @@ const IssueDetailPage: React.FC = () => {
         <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
           <Typography variant="subtitle2" fontWeight={600} mb={1}>Child Issues</Typography>
           {issue.children.map((c) => (
-            <Chip key={c.id} label={`${c.key} — ${c.summary}`} clickable onClick={() => navigate(`/projects/${projectId}/issues/${c.id}`)} sx={{ mr: 0.5, mb: 0.5 }} />
+            <Chip key={c.id} label={`${c.key} — ${c.title}`} clickable onClick={() => navigate(`/projects/${projectId}/issues/${c.id}`)} sx={{ mr: 0.5, mb: 0.5 }} />
           ))}
         </Paper>
       )}
@@ -327,7 +327,7 @@ const IssueDetailPage: React.FC = () => {
         <DialogTitle>Edit Issue — {issue.key}</DialogTitle>
         <DialogContent>
           {editError && <Alert severity="error" sx={{ mb: 2 }}>{editError}</Alert>}
-          <TextField label="Summary" fullWidth margin="normal" value={editSummary} onChange={(e) => setEditSummary(e.target.value)} />
+          <TextField label="Title" fullWidth margin="normal" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
           <TextField label="Description" fullWidth margin="normal" multiline rows={3} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
           <FormControl fullWidth margin="normal">
             <InputLabel>Status</InputLabel>

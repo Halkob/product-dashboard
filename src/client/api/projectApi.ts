@@ -35,7 +35,7 @@ export interface Issue {
   issueNumber: number;
   projectId: number;
   type: string;
-  summary: string;
+  title: string;
   description: string | null;
   status: string;
   priority: string;
@@ -48,7 +48,7 @@ export interface Issue {
   assignee: UserRef | null;
   reporter: UserRef | null;
   sprint: { id: number; name: string } | null;
-  parent?: { id: number; key: string; summary: string } | null;
+  parent?: { id: number; key: string; title: string } | null;
   children?: Issue[];
   comments?: Comment[];
   activityLogs?: ActivityLog[];
@@ -92,8 +92,8 @@ export interface ActivityLog {
 export interface IssueLink {
   id: number;
   type: string;
-  sourceIssue?: { id: number; key: string; summary: string; status: string };
-  targetIssue?: { id: number; key: string; summary: string; status: string };
+  sourceIssue?: { id: number; key: string; title: string; status: string };
+  targetIssue?: { id: number; key: string; title: string; status: string };
 }
 
 export interface PaginatedResponse<T> {
