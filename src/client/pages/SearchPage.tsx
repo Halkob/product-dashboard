@@ -21,7 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import { searchIssues, Issue } from '../api/projectApi';
+import { searchIssues, SearchIssueResult } from '../api/projectApi';
 
 const TYPES = ['', 'Epic', 'Story', 'Task', 'Bug'];
 const STATUSES = ['', 'Backlog', 'Ready', 'In Progress', 'In Review', 'Done', 'Closed'];
@@ -40,7 +40,7 @@ const SearchPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
-  const [results, setResults] = useState<Issue[]>([]);
+  const [results, setResults] = useState<SearchIssueResult[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -57,8 +57,8 @@ const SearchPage: React.FC = () => {
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
       const res = await searchIssues(params);
-      setResults(res.data);
-      setTotal(res.pagination.total);
+      setResults(res.data.issues ?? []);
+      setTotal(res.data.issueTotal ?? 0);
     } catch (err: unknown) {
       setError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ?? 'Search failed');
     } finally {
@@ -133,7 +133,7 @@ const SearchPage: React.FC = () => {
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Box display="flex" alignItems="center" gap={1}>
                 <Typography variant="subtitle2" fontWeight={600}>{issue.key}</Typography>
-                <Typography variant="body2" sx={{ flex: 1 }} noWrap>{issue.summary}</Typography>
+                <Typography variant="body2" sx={{ flex: 1 }} noWrap>{issue.title}</Typography>
                 <Chip label={issue.type} size="small" variant="outlined" />
                 <Chip label={issue.status} size="small" color="primary" />
                 <Chip label={issue.priority} size="small" color={PRIORITY_COLORS[issue.priority] ?? 'default'} />

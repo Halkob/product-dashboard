@@ -28,10 +28,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '20'), 10)));
   const skip = (page - 1) * limit;
 
-  if (!q) {
-    res.status(400).json({ error: { message: 'q (search query) is required', statusCode: 400 } });
-    return;
-  }
+  // q is optional — if omitted, return all results (subject to other filters)
 
   const results: {
     issues?: unknown[];
@@ -44,14 +41,14 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
 
   // ── Issue search ──────────────────────────────────────────────────────────
   if (entityType === 'all' || entityType === 'issue') {
-    const issueWhere: Record<string, unknown> = {
-      archivedAt: null,
-      OR: [
+    const issueWhere: Record<string, unknown> = { archivedAt: null };
+    if (q) {
+      issueWhere['OR'] = [
         { title: { contains: q, mode: searchMode } },
         { key: { contains: q, mode: searchMode } },
         { description: { contains: q, mode: searchMode } },
-      ],
-    };
+      ];
+    }
     if (req.query['projectId']) issueWhere['projectId'] = Number(req.query['projectId']);
     if (req.query['status']) issueWhere['status'] = String(req.query['status']);
     if (req.query['priority']) issueWhere['priority'] = String(req.query['priority']);
@@ -79,14 +76,14 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
 
   // ── Project search ────────────────────────────────────────────────────────
   if (entityType === 'all' || entityType === 'project') {
-    const projectWhere: Record<string, unknown> = {
-      archivedAt: null,
-      OR: [
+    const projectWhere: Record<string, unknown> = { archivedAt: null };
+    if (q) {
+      projectWhere['OR'] = [
         { name: { contains: q, mode: searchMode } },
         { key: { contains: q, mode: searchMode } },
         { description: { contains: q, mode: searchMode } },
-      ],
-    };
+      ];
+    }
 
     const [projectTotal, projects] = await Promise.all([
       prisma.project.count({ where: projectWhere }),

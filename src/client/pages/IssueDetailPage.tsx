@@ -153,7 +153,7 @@ const IssueDetailPage: React.FC = () => {
     if (!newComment.trim()) return;
     setCommentPosting(true);
     try {
-      await createComment(iid, newComment);
+      await createComment(Number(projectId), iid, newComment);
       setNewComment('');
       load();
     } catch { /* ignore */ }
@@ -271,7 +271,7 @@ const IssueDetailPage: React.FC = () => {
             <Paper key={c.id} variant="outlined" sx={{ p: 1.5, mb: 1 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="caption" fontWeight={600}>
-                  {c.author.firstName} {c.author.lastName}
+                  {c.user.firstName} {c.user.lastName}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   {new Date(c.createdAt).toLocaleString()}
@@ -286,7 +286,7 @@ const IssueDetailPage: React.FC = () => {
               ) : (
                 <>
                   <Typography variant="body2" mt={0.5}>{c.content}</Typography>
-                  {user && user.id === c.author.id && (
+                  {user && user.id === c.user.id && (
                     <Box mt={0.5}>
                       <IconButton size="small" onClick={() => { setEditingCommentId(c.id); setEditCommentText(c.content); }}>
                         <EditIcon fontSize="small" />

@@ -36,6 +36,7 @@ import {
   fetchSprints,
   fetchBacklog,
   fetchBoard,
+  fetchUsers,
   createIssue,
   createSprint,
   updateSprint,
@@ -43,6 +44,7 @@ import {
   Project,
   Issue,
   Sprint,
+  UserRef,
 } from '../api/projectApi';
 
 /* ─── Constants ──────────────────────────────────────────────────── */
@@ -107,6 +109,7 @@ const ProjectDetailPage: React.FC = () => {
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
   const [boardData, setBoardData] = useState<Record<string, Issue[]>>({});
   const [backlog, setBacklog] = useState<Issue[]>([]);
+  const [users, setUsers] = useState<UserRef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,6 +124,8 @@ const ProjectDetailPage: React.FC = () => {
   const [iDesc, setIDesc] = useState('');
   const [iPriority, setIPriority] = useState('Medium');
   const [iEstimate, setIEstimate] = useState<number | ''>('');
+  const [iAssigneeId, setIAssigneeId] = useState<number | ''>('');
+  const [iSprintId, setISprintId] = useState<number | ''>('');
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -136,9 +141,10 @@ const ProjectDetailPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [proj, sprintList] = await Promise.all([fetchProject(pid), fetchSprints(pid)]);
+      const [proj, sprintList, userList] = await Promise.all([fetchProject(pid), fetchSprints(pid), fetchUsers()]);
       setProject(proj);
       setSprints(sprintList);
+      setUsers(userList);
 
       const active = sprintList.find((s: Sprint) => s.status === 'active') ?? null;
       setActiveSprint(active);
@@ -179,12 +185,15 @@ const ProjectDetailPage: React.FC = () => {
         description: iDesc || undefined,
         priority: iPriority,
         estimate: iEstimate === '' ? undefined : iEstimate,
-        sprintId: activeSprint?.id ?? undefined,
+        assigneeId: iAssigneeId === '' ? undefined : iAssigneeId,
+        sprintId: iSprintId === '' ? (activeSprint?.id ?? undefined) : iSprintId,
       });
       setIssueDialogOpen(false);
       setITitle('');
       setIDesc('');
       setIEstimate('');
+      setIAssigneeId('');
+      setISprintId('');
       load();
     } catch (err: unknown) {
       setFormError((err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message ?? 'Create failed');
@@ -268,7 +277,7 @@ const ProjectDetailPage: React.FC = () => {
                   color={s.status === 'active' ? 'primary' : 'default'}
                   variant={s.status === 'active' ? 'filled' : 'outlined'}
                 />
-                {s.status === 'planning' && (
+                {s.status === 'planned' && (
                   <Button size="small" variant="outlined" color="success" onClick={() => handleActivateSprint(s)}>
                     Start Sprint
                   </Button>
@@ -350,6 +359,22 @@ const ProjectDetailPage: React.FC = () => {
             <Select value={iEstimate} label="Estimate" onChange={(e) => setIEstimate(e.target.value === '' ? '' : Number(e.target.value))}>
               <MenuItem value="">None</MenuItem>
               {FIBONACCI.map((f) => <MenuItem key={f} value={f}>{f} pts</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Assignee</InputLabel>
+            <Select value={iAssigneeId} label="Assignee" onChange={(e) => setIAssigneeId(e.target.value === '' ? '' : Number(e.target.value))}>
+              <MenuItem value="">Unassigned</MenuItem>
+              {users.map((u) => <MenuItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</MenuItem>)}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Sprint</InputLabel>
+            <Select value={iSprintId} label="Sprint" onChange={(e) => setISprintId(e.target.value === '' ? '' : Number(e.target.value))}>
+              <MenuItem value="">Backlog (no sprint)</MenuItem>
+              {sprints.filter((s) => s.status !== 'completed').map((s) => (
+                <MenuItem key={s.id} value={s.id}>{s.name} ({s.status})</MenuItem>
+              ))}
             </Select>
           </FormControl>
         </DialogContent>

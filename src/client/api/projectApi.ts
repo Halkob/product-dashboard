@@ -75,7 +75,7 @@ export interface Comment {
   content: string;
   createdAt: string;
   updatedAt: string;
-  author: UserRef;
+  user: UserRef;
 }
 
 export interface ActivityLog {
@@ -117,6 +117,11 @@ export interface Workspace {
 
 export async function fetchWorkspaces() {
   const res = await api.get<{ data: Workspace[] }>('/workspaces');
+  return res.data.data;
+}
+
+export async function fetchUsers() {
+  const res = await api.get<{ data: UserRef[] }>('/users');
   return res.data.data;
 }
 
@@ -215,14 +220,14 @@ export async function fetchBoard(projectId: number, sprintId: number) {
 
 /* ─── Comments ───────────────────────────────────────────────────── */
 
-export async function createComment(issueId: number, content: string) {
-  const res = await api.post<Comment>(`/issues/${issueId}/comments`, { content });
-  return res.data;
+export async function createComment(projectId: number, issueId: number, content: string) {
+  const res = await api.post<{ data: Comment }>(`/projects/${projectId}/issues/${issueId}/comments`, { content });
+  return res.data.data;
 }
 
 export async function updateComment(commentId: number, content: string) {
-  const res = await api.put<Comment>(`/comments/${commentId}`, { content });
-  return res.data;
+  const res = await api.put<{ data: Comment }>(`/comments/${commentId}`, { content });
+  return res.data.data;
 }
 
 export async function deleteComment(commentId: number) {
@@ -237,9 +242,32 @@ export async function fetchActivity(issueId: number, params?: Record<string, str
   return res.data;
 }
 
+export interface SearchIssueResult {
+  id: number;
+  key: string;
+  title: string;
+  type: string;
+  status: string;
+  priority: string;
+  estimate: number | null;
+  projectId: number;
+  assignee: UserRef | null;
+  project: { id: number; key: string; name: string } | null;
+}
+
+export interface SearchResponse {
+  data: {
+    issues?: SearchIssueResult[];
+    projects?: unknown[];
+    issueTotal?: number;
+    projectTotal?: number;
+  };
+  pagination: { page: number; limit: number };
+}
+
 /* ─── Search ─────────────────────────────────────────────────────── */
 
 export async function searchIssues(params: Record<string, string | number>) {
-  const res = await api.get<PaginatedResponse<Issue>>('/search', { params });
+  const res = await api.get<SearchResponse>('/search', { params });
   return res.data;
 }
