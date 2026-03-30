@@ -28,10 +28,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
   const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '20'), 10)));
   const skip = (page - 1) * limit;
 
-  if (!q) {
-    res.status(400).json({ error: { message: 'q (search query) is required', statusCode: 400 } });
-    return;
-  }
+  // q is optional — if omitted, return all results (subject to other filters)
 
   const results: {
     issues?: unknown[];
@@ -44,19 +41,21 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
 
   // ── Issue search ──────────────────────────────────────────────────────────
   if (entityType === 'all' || entityType === 'issue') {
-    const issueWhere: Record<string, unknown> = {
-      archivedAt: null,
-      OR: [
+    const issueWhere: Record<string, unknown> = { archivedAt: null };
+    if (q) {
+      issueWhere['OR'] = [
         { title: { contains: q, mode: searchMode } },
         { key: { contains: q, mode: searchMode } },
         { description: { contains: q, mode: searchMode } },
-      ],
-    };
+      ];
+    }
     if (req.query['projectId']) issueWhere['projectId'] = Number(req.query['projectId']);
     if (req.query['status']) issueWhere['status'] = String(req.query['status']);
     if (req.query['priority']) issueWhere['priority'] = String(req.query['priority']);
     if (req.query['assigneeId']) issueWhere['assigneeId'] = Number(req.query['assigneeId']);
-    if (req.query['type'] && req.query['type'] !== 'issue') issueWhere['type'] = String(req.query['type']);
+    // 'issueType' filters by the Issue.type field (Epic/Story/Task/Bug)
+    // Note: 'type' query param is reserved for entityType (issue|project|all)
+    if (req.query['issueType']) issueWhere['type'] = String(req.query['issueType']);
 
     const [issueTotal, issues] = await Promise.all([
       prisma.issue.count({ where: issueWhere }),
@@ -79,14 +78,14 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
 
   // ── Project search ────────────────────────────────────────────────────────
   if (entityType === 'all' || entityType === 'project') {
-    const projectWhere: Record<string, unknown> = {
-      archivedAt: null,
-      OR: [
+    const projectWhere: Record<string, unknown> = { archivedAt: null };
+    if (q) {
+      projectWhere['OR'] = [
         { name: { contains: q, mode: searchMode } },
         { key: { contains: q, mode: searchMode } },
         { description: { contains: q, mode: searchMode } },
-      ],
-    };
+      ];
+    }
 
     const [projectTotal, projects] = await Promise.all([
       prisma.project.count({ where: projectWhere }),

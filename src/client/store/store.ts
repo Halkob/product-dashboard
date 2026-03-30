@@ -12,6 +12,18 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
 // ---------------------------------------------------------------------------
+// Axios request interceptor — attach Bearer token from Redux state
+// ---------------------------------------------------------------------------
+api.interceptors.request.use((config) => {
+  const token = store.getState().auth.accessToken;
+  if (token) {
+    config.headers = config.headers ?? {};
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// ---------------------------------------------------------------------------
 // Axios response interceptor — silent token renewal
 // ---------------------------------------------------------------------------
 // When any API call returns 401, attempt to get a new access token via the

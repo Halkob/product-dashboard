@@ -10,6 +10,8 @@ import sprintRoutes from './routes/sprints';
 import commentRoutes from './routes/comments';
 import commentStandaloneRoutes from './routes/comments-standalone';
 import searchRoutes from './routes/search';
+import workspaceRoutes from './routes/workspaces';
+import userRoutes from './routes/users';
 import { errorHandler } from './middleware/errorHandler';
 
 const app: Application = express();
@@ -33,6 +35,8 @@ app.use('/api/projects/:projectId/issues/:issueId/comments', commentRoutes);
 app.use('/api/issues', issueStandaloneRoutes);
 app.use('/api/comments', commentStandaloneRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 handler — catches any request that didn't match a route above
 app.use((_req, res) => {

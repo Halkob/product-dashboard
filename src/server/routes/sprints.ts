@@ -67,6 +67,40 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
   res.json({ data: sprints });
 });
 
+// ── GET /api/projects/:projectId/backlog ──────────────────────────────────────
+// Issues not assigned to any sprint
+// NOTE: must be registered BEFORE /:sprintId to prevent 'backlog' being parsed as a sprint id
+
+router.get('/backlog/items', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const projectId = parseInt(req.params['projectId'], 10);
+  if (isNaN(projectId)) { res.status(400).json({ error: { message: 'Invalid projectId', statusCode: 400 } }); return; }
+
+  const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '20'), 10)));
+  const skip = (page - 1) * limit;
+
+  const where: Record<string, unknown> = { projectId, sprintId: null, archivedAt: null };
+  if (req.query['type']) where['type'] = String(req.query['type']);
+  if (req.query['priority']) where['priority'] = String(req.query['priority']);
+
+  const [total, issues] = await Promise.all([
+    prisma.issue.count({ where }),
+    prisma.issue.findMany({
+      where,
+      orderBy: { issueNumber: 'asc' },
+      skip,
+      take: limit,
+      select: {
+        id: true, key: true, issueNumber: true, title: true,
+        type: true, status: true, priority: true, estimate: true,
+        assignee: { select: { id: true, firstName: true, lastName: true } },
+      },
+    }),
+  ]);
+
+  res.json({ data: issues, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
+});
+
 // ── GET /api/projects/:projectId/sprints/:sprintId ────────────────────────────
 
 router.get('/:sprintId', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
@@ -170,39 +204,6 @@ router.post('/:sprintId/close', authenticate, async (req: AuthRequest, res: Resp
       incompleteIssuesMoved: incomplete.count,
     },
   });
-});
-
-// ── GET /api/projects/:projectId/backlog ──────────────────────────────────────
-// Issues not assigned to any sprint
-
-router.get('/backlog/items', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  const projectId = parseInt(req.params['projectId'], 10);
-  if (isNaN(projectId)) { res.status(400).json({ error: { message: 'Invalid projectId', statusCode: 400 } }); return; }
-
-  const page = Math.max(1, parseInt(String(req.query['page'] ?? '1'), 10));
-  const limit = Math.min(100, Math.max(1, parseInt(String(req.query['limit'] ?? '20'), 10)));
-  const skip = (page - 1) * limit;
-
-  const where: Record<string, unknown> = { projectId, sprintId: null, archivedAt: null };
-  if (req.query['type']) where['type'] = String(req.query['type']);
-  if (req.query['priority']) where['priority'] = String(req.query['priority']);
-
-  const [total, issues] = await Promise.all([
-    prisma.issue.count({ where }),
-    prisma.issue.findMany({
-      where,
-      orderBy: { issueNumber: 'asc' },
-      skip,
-      take: limit,
-      select: {
-        id: true, key: true, issueNumber: true, title: true,
-        type: true, status: true, priority: true, estimate: true,
-        assignee: { select: { id: true, firstName: true, lastName: true } },
-      },
-    }),
-  ]);
-
-  res.json({ data: issues, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
 });
 
 // ── GET /api/projects/:projectId/sprints/:sprintId/board ──────────────────────
