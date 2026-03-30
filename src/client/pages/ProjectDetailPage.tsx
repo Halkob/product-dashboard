@@ -32,7 +32,6 @@ import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import {
   fetchProject,
-  fetchIssues,
   fetchSprints,
   fetchBacklog,
   fetchBoard,
@@ -153,14 +152,17 @@ const ProjectDetailPage: React.FC = () => {
         const board = await fetchBoard(pid, active.id);
         setBoardData(board);
       } else {
-        // No active sprint — show all issues in columns
-        const issueRes = await fetchIssues(pid, { limit: 200 });
+        // No active sprint — show only unassigned (backlog) issues in columns
+        // so the board doesn't show issues from completed sprints
+        const blIssues = await fetchBacklog(pid);
         const grouped: Record<string, Issue[]> = {};
         for (const s of STATUSES) grouped[s] = [];
-        for (const i of issueRes.data) {
+        for (const i of blIssues) {
           (grouped[i.status] ??= []).push(i);
         }
         setBoardData(grouped);
+        setBacklog(blIssues);
+        return; // backlog already set above, skip the fetch below
       }
 
       const bl = await fetchBacklog(pid);

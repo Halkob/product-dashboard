@@ -53,7 +53,7 @@ const SearchPage: React.FC = () => {
     try {
       const params: Record<string, string | number> = { limit: 50 };
       if (query.trim()) params.q = query.trim();
-      if (typeFilter) params.type = typeFilter;
+      if (typeFilter) params.issueType = typeFilter;
       if (statusFilter) params.status = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
       const res = await searchIssues(params);

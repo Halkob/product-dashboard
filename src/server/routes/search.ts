@@ -53,7 +53,9 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
     if (req.query['status']) issueWhere['status'] = String(req.query['status']);
     if (req.query['priority']) issueWhere['priority'] = String(req.query['priority']);
     if (req.query['assigneeId']) issueWhere['assigneeId'] = Number(req.query['assigneeId']);
-    if (req.query['type'] && req.query['type'] !== 'issue') issueWhere['type'] = String(req.query['type']);
+    // 'issueType' filters by the Issue.type field (Epic/Story/Task/Bug)
+    // Note: 'type' query param is reserved for entityType (issue|project|all)
+    if (req.query['issueType']) issueWhere['type'] = String(req.query['issueType']);
 
     const [issueTotal, issues] = await Promise.all([
       prisma.issue.count({ where: issueWhere }),
