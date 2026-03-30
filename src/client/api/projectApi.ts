@@ -106,6 +106,20 @@ export interface PaginatedResponse<T> {
   };
 }
 
+/* ─── Workspaces ─────────────────────────────────────────────────── */
+
+export interface Workspace {
+  id: number;
+  name: string;
+  description: string | null;
+  roleId: number;
+}
+
+export async function fetchWorkspaces() {
+  const res = await api.get<{ data: Workspace[] }>('/workspaces');
+  return res.data.data;
+}
+
 /* ─── Projects ───────────────────────────────────────────────────── */
 
 export async function fetchProjects(params?: Record<string, string | number>) {

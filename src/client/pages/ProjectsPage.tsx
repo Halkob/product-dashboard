@@ -22,11 +22,12 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FolderIcon from '@mui/icons-material/Folder';
-import { fetchProjects, createProject, Project } from '../api/projectApi';
+import { fetchProjects, createProject, fetchWorkspaces, Project } from '../api/projectApi';
 
 const ProjectsPage: React.FC = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [workspaceId, setWorkspaceId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,8 +42,19 @@ const ProjectsPage: React.FC = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
-    fetchProjects({ limit: 50 })
-      .then((res) => setProjects(res.data))
+    Promise.all([
+      fetchProjects({ limit: 50 }),
+      fetchWorkspaces(),
+    ])
+      .then(([projRes, workspaces]) => {
+        setProjects(projRes.data);
+        // Use workspaceId from existing projects, or the first available workspace
+        if (projRes.data.length > 0) {
+          setWorkspaceId(projRes.data[0].workspaceId);
+        } else if (workspaces.length > 0) {
+          setWorkspaceId(workspaces[0].id);
+        }
+      })
       .catch((err) => setError(err?.response?.data?.error?.message ?? 'Failed to load'))
       .finally(() => setLoading(false));
   }, []);
@@ -54,11 +66,13 @@ const ProjectsPage: React.FC = () => {
       setFormError('Key and name are required');
       return;
     }
+    if (!workspaceId) {
+      setFormError('No workspace available. Please contact your administrator.');
+      return;
+    }
     setCreating(true);
     setFormError(null);
     try {
-      // Use the user's workspaceId — fetch from first project or default to 1
-      const workspaceId = projects.length > 0 ? projects[0].workspaceId : 1;
       await createProject({ key: formKey.toUpperCase(), name: formName, description: formDesc || undefined, workspaceId });
       setDialogOpen(false);
       setFormKey('');
