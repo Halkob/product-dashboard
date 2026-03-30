@@ -128,8 +128,8 @@ export async function fetchProjects(params?: Record<string, string | number>) {
 }
 
 export async function fetchProject(id: number) {
-  const res = await api.get<Project>(`/projects/${id}`);
-  return res.data;
+  const res = await api.get<{ data: Project }>(`/projects/${id}`);
+  return res.data.data;
 }
 
 export async function createProject(data: {
@@ -140,13 +140,13 @@ export async function createProject(data: {
   startDate?: string;
   endDate?: string;
 }) {
-  const res = await api.post<Project>('/projects', data);
-  return res.data;
+  const res = await api.post<{ data: Project }>('/projects', data);
+  return res.data.data;
 }
 
 export async function updateProject(id: number, data: Record<string, unknown>) {
-  const res = await api.put<Project>(`/projects/${id}`, data);
-  return res.data;
+  const res = await api.put<{ data: Project }>(`/projects/${id}`, data);
+  return res.data.data;
 }
 
 export async function deleteProject(id: number) {
@@ -162,18 +162,18 @@ export async function fetchIssues(projectId: number, params?: Record<string, str
 }
 
 export async function fetchIssue(issueId: number) {
-  const res = await api.get<Issue>(`/issues/${issueId}`);
-  return res.data;
+  const res = await api.get<{ data: Issue }>(`/issues/${issueId}`);
+  return res.data.data;
 }
 
 export async function createIssue(projectId: number, data: Record<string, unknown>) {
-  const res = await api.post<Issue>(`/projects/${projectId}/issues`, data);
-  return res.data;
+  const res = await api.post<{ data: Issue }>(`/projects/${projectId}/issues`, data);
+  return res.data.data;
 }
 
 export async function updateIssue(issueId: number, data: Record<string, unknown>) {
-  const res = await api.put<Issue>(`/issues/${issueId}`, data);
-  return res.data;
+  const res = await api.put<{ data: Issue }>(`/issues/${issueId}`, data);
+  return res.data.data;
 }
 
 export async function deleteIssue(issueId: number) {
@@ -184,33 +184,33 @@ export async function deleteIssue(issueId: number) {
 /* ─── Sprints ────────────────────────────────────────────────────── */
 
 export async function fetchSprints(projectId: number, params?: Record<string, string>) {
-  const res = await api.get<Sprint[]>(`/projects/${projectId}/sprints`, { params });
-  return res.data;
+  const res = await api.get<{ data: Sprint[] }>(`/projects/${projectId}/sprints`, { params });
+  return res.data.data;
 }
 
 export async function createSprint(projectId: number, data: Record<string, unknown>) {
-  const res = await api.post<Sprint>(`/projects/${projectId}/sprints`, data);
-  return res.data;
+  const res = await api.post<{ data: Sprint }>(`/projects/${projectId}/sprints`, data);
+  return res.data.data;
 }
 
 export async function updateSprint(projectId: number, sprintId: number, data: Record<string, unknown>) {
-  const res = await api.put<Sprint>(`/projects/${projectId}/sprints/${sprintId}`, data);
-  return res.data;
+  const res = await api.put<{ data: Sprint }>(`/projects/${projectId}/sprints/${sprintId}`, data);
+  return res.data.data;
 }
 
 export async function closeSprint(projectId: number, sprintId: number) {
-  const res = await api.post<Sprint>(`/projects/${projectId}/sprints/${sprintId}/close`);
-  return res.data;
+  const res = await api.post<{ data: Sprint }>(`/projects/${projectId}/sprints/${sprintId}/close`);
+  return res.data.data;
 }
 
 export async function fetchBacklog(projectId: number) {
-  const res = await api.get<Issue[]>(`/projects/${projectId}/sprints/backlog/items`);
-  return res.data;
+  const res = await api.get<{ data: Issue[]; pagination: unknown }>(`/projects/${projectId}/sprints/backlog/items`);
+  return res.data.data;
 }
 
 export async function fetchBoard(projectId: number, sprintId: number) {
-  const res = await api.get<Record<string, Issue[]>>(`/projects/${projectId}/sprints/${sprintId}/board`);
-  return res.data;
+  const res = await api.get<{ data: { sprint: Sprint; board: Record<string, Issue[]> } }>(`/projects/${projectId}/sprints/${sprintId}/board`);
+  return res.data.data.board;
 }
 
 /* ─── Comments ───────────────────────────────────────────────────── */
